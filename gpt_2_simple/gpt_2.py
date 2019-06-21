@@ -446,7 +446,7 @@ def generate(sess,
         return gen_texts
 
 def generateWithPrompt(sess,
-             run_name=run_name,
+             run_name='run1',
              return_as_list=False,
              truncate=None,
              destination_path=None,
