@@ -445,6 +445,90 @@ def generate(sess,
     if return_as_list:
         return gen_texts
 
+def generateWithPrompt(sess,
+             run_name=run_name,
+             return_as_list=False,
+             truncate=None,
+             destination_path=None,
+             sample_delim='=' * 20 + '\n',
+             prefix=None,
+             seed=None,
+             nsamples=1,
+             batch_size=1,
+             length=1023,
+             temperature=0.7,
+             top_k=0,
+             top_p=0.0,
+             include_prefix=True):
+    """Generates text from a model loaded into memory.
+    Adapted from https://github.com/openai/gpt-2/blob/master/src/interactive_conditional_samples.py
+    """
+
+    if batch_size is None:
+        batch_size = 1
+    assert nsamples % batch_size == 0
+
+    if nsamples == 1:
+        sample_delim = ''
+
+    if prefix == '':
+        prefix = None
+
+    CHECKPOINT_DIR = 'checkpoint'
+    SAMPLE_DIR = 'samples'
+
+    checkpoint_path = os.path.join(CHECKPOINT_DIR, run_name)
+
+    enc = encoder.get_encoder(checkpoint_path)
+    hparams = model.default_hparams()
+    with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
+        hparams.override_from_dict(json.load(f))
+
+    if prefix:
+        context = tf.placeholder(tf.int32, [batch_size, None])
+        context_tokens = enc.encode(prefix)
+
+    np.random.seed(seed)
+    tf.set_random_seed(seed)
+
+    output = sample.sample_sequence(
+        hparams=hparams,
+        length=min(length, 1023 - (len(context_tokens) if prefix else 0)),
+        start_token=enc.encoder['<|endoftext|>'] if not prefix else None,
+        context=context if prefix else None,
+        batch_size=batch_size,
+        temperature=temperature, top_k=top_k, top_p=top_p
+    )[:, 1:]
+
+    if destination_path:
+        f = open(destination_path, 'w')
+    generated = 0
+    gen_texts = []
+    
+    while True:
+      raw_text = input("Model prompt >>> ")
+      while not raw_text:
+          print('Prompt should not be empty!')
+          raw_text = input("Model prompt >>> ")
+      context_tokens = enc.encode(raw_text)
+      generated = 0
+      while generated < nsamples:
+          out = sess.run(output, feed_dict={
+              context: [context_tokens for _ in range(batch_size)]
+          })[:, len(context_tokens):]
+          for i in range(batch_size):
+              generated += 1
+              text = enc.decode(out[i])
+              print("=" * 40 + " SAMPLE " + str(generated) + " " + "=" * 40)
+              print(text)
+      print("=" * 80)
+      
+
+    if destination_path:
+        f.close()
+
+    if return_as_list:
+        return gen_texts
 
 def generate_to_file(sess,
                      run_name='run1',
