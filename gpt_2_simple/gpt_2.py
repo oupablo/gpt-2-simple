@@ -484,8 +484,9 @@ def generateWithPrompt(sess,
     with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
 
-    context = tf.placeholder(tf.int32, [batch_size, None])
-    context_tokens = enc.encode(prefix)
+    if prefix:
+        context = tf.placeholder(tf.int32, [batch_size, None])
+        context_tokens = enc.encode(prefix)
 
     np.random.seed(seed)
     tf.set_random_seed(seed)
