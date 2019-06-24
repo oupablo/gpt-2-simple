@@ -506,10 +506,14 @@ def generateWithPrompt(sess,
     gen_texts = []
     
     while True:
-      raw_text = input("Model prompt >>> ")
+      raw_text = input("Model prompt (type stop to exit) >>> ")
       while not raw_text:
           print('Prompt should not be empty!')
-          raw_text = input("Model prompt >>> ")
+          raw_text = input("Model prompt (type stop to exit) >>> ")
+
+      if raw_text == 'stop':
+          sys.exit()
+
       context_tokens = enc.encode(raw_text)
       generated = 0
       while generated < nsamples:
