@@ -513,7 +513,7 @@ def generateWithPrompt(sess,
       context_tokens = enc.encode(raw_text)
       generated = 0
       while generated < nsamples:
-           if not prefix:
+        if not prefix:
             out = sess.run(output)
         else:
             out = sess.run(output, feed_dict={
