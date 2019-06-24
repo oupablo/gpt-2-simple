@@ -513,14 +513,35 @@ def generateWithPrompt(sess,
       context_tokens = enc.encode(raw_text)
       generated = 0
       while generated < nsamples:
-          out = sess.run(output, feed_dict={
-              context: [context_tokens for _ in range(batch_size)]
-          })[:, len(context_tokens):]
-          for i in range(batch_size):
-              generated += 1
-              text = enc.decode(out[i])
-              print("=" * 40 + " SAMPLE " + str(generated) + " " + "=" * 40)
-              print(text)
+           if not prefix:
+            out = sess.run(output)
+        else:
+            out = sess.run(output, feed_dict={
+                    context: batch_size * [context_tokens]
+                })
+        for i in range(batch_size):
+            generated += 1
+            gen_text = enc.decode(out[i])
+            if prefix:
+                gen_text = enc.decode(context_tokens[:1]) + gen_text
+            if truncate:
+                truncate_esc = re.escape(truncate)
+                if prefix and not include_prefix:
+                    prefix_esc = re.escape(prefix)
+                    pattern = '(?:{})(.*?)(?:{})'.format(prefix_esc,
+                                                         truncate_esc)
+                else:
+                    pattern = '(.*?)(?:{})'.format(truncate_esc)
+
+                trunc_text = re.search(pattern, gen_text, re.S)
+                if trunc_text:
+                    gen_text = trunc_text.group(1)
+            gen_text = gen_text.lstrip('\n')
+            if destination_path:
+                f.write("{}\n{}".format(gen_text, sample_delim))
+            if not return_as_list and not destination_path:
+                print("{}\n{}".format(gen_text, sample_delim), end='')
+            gen_texts.append(gen_text)
       print("=" * 80)
       
 
